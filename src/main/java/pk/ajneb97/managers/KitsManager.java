@@ -323,12 +323,8 @@ public class KitsManager {
                 playerInventory.setItemInOffHand(item);
             }else{
                 if(playerInventory.firstEmpty() == -1 && dropItemsIfFullInventory){
-                    if(FoliaScheduler.isFolia()){
-                        FoliaScheduler.runAtLocation(plugin, player.getLocation(),
-                                () -> player.getWorld().dropItemNaturally(player.getLocation(), item));
-                    }else{
-                        player.getWorld().dropItemNaturally(player.getLocation(), item);
-                    }
+                    FoliaScheduler.runAtLocation(plugin, player.getLocation(),
+                            () -> player.getWorld().dropItemNaturally(player.getLocation(), item));
                 }else{
                     playerInventory.addItem(item);
                 }

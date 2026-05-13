@@ -154,7 +154,6 @@ public class MySQLConnection {
             try(Connection connection = getConnection()){
                 PreparedStatement statement;
                 if(mustCreate){
-                    // Insert
                     statement = connection.prepareStatement(
                             "INSERT INTO playerkits_players_kits " +
                                     "(UUID, NAME, COOLDOWN, ONE_TIME, BOUGHT) VALUE (?,?,?,?,?)");
@@ -165,7 +164,6 @@ public class MySQLConnection {
                     statement.setBoolean(4, kit.isOneTime());
                     statement.setBoolean(5, kit.isBought());
                 }else{
-                    // Update
                     statement = connection.prepareStatement(
                             "UPDATE playerkits_players_kits SET " +
                                     "COOLDOWN=?, ONE_TIME=?, BOUGHT=? WHERE UUID=? AND NAME=?");

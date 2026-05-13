@@ -73,11 +73,7 @@ public class InventoryManager {
     }
 
     public void removeInventoryPlayer(Player player){
-        for(int i=0;i<players.size();i++){
-            if(players.get(i).getPlayer().equals(player)){
-                players.remove(i);
-            }
-        }
+        players.removeIf(p -> p.getPlayer().equals(player));
     }
 
     public void openInventory(InventoryPlayer inventoryPlayer){

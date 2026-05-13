@@ -87,7 +87,7 @@ public class ActionBarAPI
       if (duration > 0) {
           // Sends empty message at the end of the duration. Allows messages shorter than 3 seconds, ensures precision.
           FoliaScheduler.runForEntityLater(plugin, player,
-                  () -> sendActionBar(player, ""), null, duration + 1L);
+                  () -> sendActionBar(player, ""), duration + 1L);
       }
 
       // Re-sends the messages every 3 seconds so it doesn't go away from the player's screen.
@@ -95,7 +95,7 @@ public class ActionBarAPI
           duration -= 40;
           final long delay = duration;
           FoliaScheduler.runForEntityLater(plugin, player,
-                  () -> sendActionBar(player, message), null, delay);
+                  () -> sendActionBar(player, message), delay);
       }
   }
 

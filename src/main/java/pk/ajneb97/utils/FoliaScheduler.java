@@ -8,37 +8,39 @@ import org.bukkit.scheduler.BukkitTask;
 
 import java.lang.reflect.Method;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 /**
- * Lightweight scheduler abstraction that works transparently on both
- * Paper/Spigot and Folia. On Folia, the global region scheduler, region
- * scheduler, entity scheduler and async scheduler are dispatched via reflection,
- * which keeps this plugin compiling against the regular Paper API without
- * a hard dependency on the Folia-specific classes.
+ * Lightweight scheduler bridge that works transparently on both
+ * Paper/Spigot and Folia. On Folia the global region, region, entity and async
+ * schedulers are dispatched via reflection, which keeps this plugin compiling
+ * against the regular Paper API without a hard dependency on the Folia classes.
  */
 public final class FoliaScheduler {
 
     private static final boolean FOLIA;
-    private static Method getGlobalRegionScheduler;
-    private static Method getAsyncScheduler;
-    private static Method getRegionScheduler;
-    private static Method entityGetScheduler;
 
-    private static Method globalRun;
-    private static Method globalRunDelayed;
-    private static Method globalRunAtFixedRate;
+    // Folia scheduler accessors (null on non-Folia).
+    private static final Method GET_GLOBAL_SCHEDULER;
+    private static final Method GET_ASYNC_SCHEDULER;
+    private static final Method GET_REGION_SCHEDULER;
+    private static final Method ENTITY_GET_SCHEDULER;
 
-    private static Method asyncRunNow;
-    private static Method asyncRunDelayed;
-    private static Method asyncRunAtFixedRate;
+    private static final Method GLOBAL_RUN;
+    private static final Method GLOBAL_RUN_DELAYED;
+    private static final Method GLOBAL_RUN_FIXED;
 
-    private static Method regionExecute;
+    private static final Method ASYNC_RUN;
+    private static final Method ASYNC_RUN_DELAYED;
+    private static final Method ASYNC_RUN_FIXED;
 
-    private static Method entityRun;
-    private static Method entityRunDelayed;
-    private static Method entityRunAtFixedRate;
+    private static final Method REGION_EXECUTE;
 
-    private static Method taskCancel;
+    private static final Method ENTITY_RUN;
+    private static final Method ENTITY_RUN_DELAYED;
+    private static final Method ENTITY_RUN_FIXED;
+
+    private static final Method TASK_CANCEL;
 
     static {
         boolean folia;
@@ -52,36 +54,52 @@ public final class FoliaScheduler {
 
         if (FOLIA) {
             try {
-                Class<?> serverClass = Bukkit.getServer().getClass();
-                getGlobalRegionScheduler = serverClass.getMethod("getGlobalRegionScheduler");
-                getAsyncScheduler = serverClass.getMethod("getAsyncScheduler");
-                getRegionScheduler = serverClass.getMethod("getRegionScheduler");
-                entityGetScheduler = Class.forName("org.bukkit.entity.Entity").getMethod("getScheduler");
+                Class<?> server = Bukkit.getServer().getClass();
+                GET_GLOBAL_SCHEDULER = server.getMethod("getGlobalRegionScheduler");
+                GET_ASYNC_SCHEDULER = server.getMethod("getAsyncScheduler");
+                GET_REGION_SCHEDULER = server.getMethod("getRegionScheduler");
+                ENTITY_GET_SCHEDULER = Entity.class.getMethod("getScheduler");
 
-                Class<?> globalRegionScheduler = Class.forName("io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler");
-                Class<?> asyncScheduler = Class.forName("io.papermc.paper.threadedregions.scheduler.AsyncScheduler");
-                Class<?> regionScheduler = Class.forName("io.papermc.paper.threadedregions.scheduler.RegionScheduler");
-                Class<?> entityScheduler = Class.forName("io.papermc.paper.threadedregions.scheduler.EntityScheduler");
-                Class<?> scheduledTask = Class.forName("io.papermc.paper.threadedregions.scheduler.ScheduledTask");
+                Class<?> globalCls = Class.forName("io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler");
+                Class<?> asyncCls = Class.forName("io.papermc.paper.threadedregions.scheduler.AsyncScheduler");
+                Class<?> regionCls = Class.forName("io.papermc.paper.threadedregions.scheduler.RegionScheduler");
+                Class<?> entityCls = Class.forName("io.papermc.paper.threadedregions.scheduler.EntityScheduler");
+                Class<?> taskCls = Class.forName("io.papermc.paper.threadedregions.scheduler.ScheduledTask");
 
-                globalRun = globalRegionScheduler.getMethod("run", Plugin.class, java.util.function.Consumer.class);
-                globalRunDelayed = globalRegionScheduler.getMethod("runDelayed", Plugin.class, java.util.function.Consumer.class, long.class);
-                globalRunAtFixedRate = globalRegionScheduler.getMethod("runAtFixedRate", Plugin.class, java.util.function.Consumer.class, long.class, long.class);
+                GLOBAL_RUN = globalCls.getMethod("run", Plugin.class, Consumer.class);
+                GLOBAL_RUN_DELAYED = globalCls.getMethod("runDelayed", Plugin.class, Consumer.class, long.class);
+                GLOBAL_RUN_FIXED = globalCls.getMethod("runAtFixedRate", Plugin.class, Consumer.class, long.class, long.class);
 
-                asyncRunNow = asyncScheduler.getMethod("runNow", Plugin.class, java.util.function.Consumer.class);
-                asyncRunDelayed = asyncScheduler.getMethod("runDelayed", Plugin.class, java.util.function.Consumer.class, long.class, TimeUnit.class);
-                asyncRunAtFixedRate = asyncScheduler.getMethod("runAtFixedRate", Plugin.class, java.util.function.Consumer.class, long.class, long.class, TimeUnit.class);
+                ASYNC_RUN = asyncCls.getMethod("runNow", Plugin.class, Consumer.class);
+                ASYNC_RUN_DELAYED = asyncCls.getMethod("runDelayed", Plugin.class, Consumer.class, long.class, TimeUnit.class);
+                ASYNC_RUN_FIXED = asyncCls.getMethod("runAtFixedRate", Plugin.class, Consumer.class, long.class, long.class, TimeUnit.class);
 
-                regionExecute = regionScheduler.getMethod("execute", Plugin.class, org.bukkit.World.class, int.class, int.class, Runnable.class);
+                REGION_EXECUTE = regionCls.getMethod("execute", Plugin.class, org.bukkit.World.class, int.class, int.class, Runnable.class);
 
-                entityRun = entityScheduler.getMethod("run", Plugin.class, java.util.function.Consumer.class, Runnable.class);
-                entityRunDelayed = entityScheduler.getMethod("runDelayed", Plugin.class, java.util.function.Consumer.class, Runnable.class, long.class);
-                entityRunAtFixedRate = entityScheduler.getMethod("runAtFixedRate", Plugin.class, java.util.function.Consumer.class, Runnable.class, long.class, long.class);
+                ENTITY_RUN = entityCls.getMethod("run", Plugin.class, Consumer.class, Runnable.class);
+                ENTITY_RUN_DELAYED = entityCls.getMethod("runDelayed", Plugin.class, Consumer.class, Runnable.class, long.class);
+                ENTITY_RUN_FIXED = entityCls.getMethod("runAtFixedRate", Plugin.class, Consumer.class, Runnable.class, long.class, long.class);
 
-                taskCancel = scheduledTask.getMethod("cancel");
+                TASK_CANCEL = taskCls.getMethod("cancel");
             } catch (ReflectiveOperationException e) {
                 throw new RuntimeException("Failed to initialize Folia scheduler bridge", e);
             }
+        } else {
+            GET_GLOBAL_SCHEDULER = null;
+            GET_ASYNC_SCHEDULER = null;
+            GET_REGION_SCHEDULER = null;
+            ENTITY_GET_SCHEDULER = null;
+            GLOBAL_RUN = null;
+            GLOBAL_RUN_DELAYED = null;
+            GLOBAL_RUN_FIXED = null;
+            ASYNC_RUN = null;
+            ASYNC_RUN_DELAYED = null;
+            ASYNC_RUN_FIXED = null;
+            REGION_EXECUTE = null;
+            ENTITY_RUN = null;
+            ENTITY_RUN_DELAYED = null;
+            ENTITY_RUN_FIXED = null;
+            TASK_CANCEL = null;
         }
     }
 
@@ -92,122 +110,130 @@ public final class FoliaScheduler {
         return FOLIA;
     }
 
-    /** Runs the task on the next global region tick (or main thread on Bukkit). */
+    /** Runs on the next global region tick (Folia) or main thread tick (Bukkit). */
     public static Task run(Plugin plugin, Runnable task) {
         if (FOLIA) {
-            Object scheduler = invoke(getGlobalRegionScheduler, Bukkit.getServer());
-            Object scheduled = invoke(globalRun, scheduler, plugin, toConsumer(task));
-            return new Task(scheduled);
+            return foliaTask(GLOBAL_RUN, globalScheduler(), plugin, asConsumer(task));
         }
-        BukkitTask bukkitTask = Bukkit.getScheduler().runTask(plugin, task);
-        return new Task(bukkitTask);
+        return new Task(Bukkit.getScheduler().runTask(plugin, task));
     }
 
     public static Task runLater(Plugin plugin, Runnable task, long delayTicks) {
-        long delay = Math.max(1L, delayTicks);
         if (FOLIA) {
-            Object scheduler = invoke(getGlobalRegionScheduler, Bukkit.getServer());
-            Object scheduled = invoke(globalRunDelayed, scheduler, plugin, toConsumer(task), delay);
-            return new Task(scheduled);
+            return foliaTask(GLOBAL_RUN_DELAYED, globalScheduler(), plugin, asConsumer(task), foliaDelay(delayTicks));
         }
-        BukkitTask bukkitTask = Bukkit.getScheduler().runTaskLater(plugin, task, delay);
-        return new Task(bukkitTask);
+        return new Task(Bukkit.getScheduler().runTaskLater(plugin, task, delayTicks));
     }
 
     public static Task runTimer(Plugin plugin, Runnable task, long delayTicks, long periodTicks) {
-        long delay = Math.max(1L, delayTicks);
-        long period = Math.max(1L, periodTicks);
         if (FOLIA) {
-            Object scheduler = invoke(getGlobalRegionScheduler, Bukkit.getServer());
-            Object scheduled = invoke(globalRunAtFixedRate, scheduler, plugin, toConsumer(task), delay, period);
-            return new Task(scheduled);
+            return foliaTask(GLOBAL_RUN_FIXED, globalScheduler(), plugin, asConsumer(task),
+                    foliaDelay(delayTicks), Math.max(1L, periodTicks));
         }
-        BukkitTask bukkitTask = Bukkit.getScheduler().runTaskTimer(plugin, task, delay, period);
-        return new Task(bukkitTask);
+        return new Task(Bukkit.getScheduler().runTaskTimer(plugin, task, delayTicks, periodTicks));
     }
 
     public static Task runAsync(Plugin plugin, Runnable task) {
         if (FOLIA) {
-            Object scheduler = invoke(getAsyncScheduler, Bukkit.getServer());
-            Object scheduled = invoke(asyncRunNow, scheduler, plugin, toConsumer(task));
-            return new Task(scheduled);
+            return foliaTask(ASYNC_RUN, asyncScheduler(), plugin, asConsumer(task));
         }
-        BukkitTask bukkitTask = Bukkit.getScheduler().runTaskAsynchronously(plugin, task);
-        return new Task(bukkitTask);
+        return new Task(Bukkit.getScheduler().runTaskAsynchronously(plugin, task));
     }
 
     public static Task runAsyncLater(Plugin plugin, Runnable task, long delayTicks) {
-        long delay = Math.max(1L, delayTicks);
         if (FOLIA) {
-            Object scheduler = invoke(getAsyncScheduler, Bukkit.getServer());
-            Object scheduled = invoke(asyncRunDelayed, scheduler, plugin, toConsumer(task), delay * 50L, TimeUnit.MILLISECONDS);
-            return new Task(scheduled);
+            return foliaTask(ASYNC_RUN_DELAYED, asyncScheduler(), plugin, asConsumer(task),
+                    foliaDelay(delayTicks) * 50L, TimeUnit.MILLISECONDS);
         }
-        BukkitTask bukkitTask = Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, task, delay);
-        return new Task(bukkitTask);
+        return new Task(Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, task, delayTicks));
     }
 
     public static Task runAsyncTimer(Plugin plugin, Runnable task, long delayTicks, long periodTicks) {
-        long delay = Math.max(1L, delayTicks);
-        long period = Math.max(1L, periodTicks);
         if (FOLIA) {
-            Object scheduler = invoke(getAsyncScheduler, Bukkit.getServer());
-            Object scheduled = invoke(asyncRunAtFixedRate, scheduler, plugin, toConsumer(task),
-                    delay * 50L, period * 50L, TimeUnit.MILLISECONDS);
-            return new Task(scheduled);
+            return foliaTask(ASYNC_RUN_FIXED, asyncScheduler(), plugin, asConsumer(task),
+                    foliaDelay(delayTicks) * 50L, Math.max(1L, periodTicks) * 50L, TimeUnit.MILLISECONDS);
         }
-        BukkitTask bukkitTask = Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, task, delay, period);
-        return new Task(bukkitTask);
+        return new Task(Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, task, delayTicks, periodTicks));
     }
 
-    /** Runs the task on the entity's tick region. The retired callback is fired if the entity is removed. */
-    public static Task runForEntity(Plugin plugin, Entity entity, Runnable task, Runnable retired) {
+    /** Runs on the entity's region tick (Folia) or main thread (Bukkit). */
+    public static Task runForEntity(Plugin plugin, Entity entity, Runnable task) {
         if (FOLIA) {
-            Object scheduler = invoke(entityGetScheduler, entity);
-            Object scheduled = invoke(entityRun, scheduler, plugin, toConsumer(task), retired);
-            return new Task(scheduled);
+            return foliaTask(ENTITY_RUN, entityScheduler(entity), plugin, asConsumer(task), null);
         }
-        BukkitTask bukkitTask = Bukkit.getScheduler().runTask(plugin, task);
-        return new Task(bukkitTask);
+        return new Task(Bukkit.getScheduler().runTask(plugin, task));
     }
 
-    public static Task runForEntityLater(Plugin plugin, Entity entity, Runnable task, Runnable retired, long delayTicks) {
-        long delay = Math.max(1L, delayTicks);
+    public static Task runForEntityLater(Plugin plugin, Entity entity, Runnable task, long delayTicks) {
         if (FOLIA) {
-            Object scheduler = invoke(entityGetScheduler, entity);
-            Object scheduled = invoke(entityRunDelayed, scheduler, plugin, toConsumer(task), retired, delay);
-            return new Task(scheduled);
+            return foliaTask(ENTITY_RUN_DELAYED, entityScheduler(entity), plugin, asConsumer(task), null, foliaDelay(delayTicks));
         }
-        BukkitTask bukkitTask = Bukkit.getScheduler().runTaskLater(plugin, task, delay);
-        return new Task(bukkitTask);
+        return new Task(Bukkit.getScheduler().runTaskLater(plugin, task, delayTicks));
     }
 
-    public static Task runForEntityTimer(Plugin plugin, Entity entity, Runnable task, Runnable retired,
-                                         long delayTicks, long periodTicks) {
-        long delay = Math.max(1L, delayTicks);
-        long period = Math.max(1L, periodTicks);
+    public static Task runForEntityTimer(Plugin plugin, Entity entity, Runnable task, long delayTicks, long periodTicks) {
         if (FOLIA) {
-            Object scheduler = invoke(entityGetScheduler, entity);
-            Object scheduled = invoke(entityRunAtFixedRate, scheduler, plugin, toConsumer(task), retired, delay, period);
-            return new Task(scheduled);
+            return foliaTask(ENTITY_RUN_FIXED, entityScheduler(entity), plugin, asConsumer(task), null,
+                    foliaDelay(delayTicks), Math.max(1L, periodTicks));
         }
-        BukkitTask bukkitTask = Bukkit.getScheduler().runTaskTimer(plugin, task, delay, period);
-        return new Task(bukkitTask);
+        return new Task(Bukkit.getScheduler().runTaskTimer(plugin, task, delayTicks, periodTicks));
     }
 
-    /** Runs the task on the region that owns the given location. */
+    /** Folia: dispatches to the global region. Paper/Spigot: runs inline. */
+    public static void runOrNow(Plugin plugin, Runnable task) {
+        if (FOLIA) {
+            invoke(GLOBAL_RUN, globalScheduler(), plugin, asConsumer(task));
+        } else {
+            task.run();
+        }
+    }
+
+    /** Folia: dispatches to the entity's region. Paper/Spigot: runs inline. */
+    public static void runForEntityOrNow(Plugin plugin, Entity entity, Runnable task) {
+        if (FOLIA) {
+            invoke(ENTITY_RUN, entityScheduler(entity), plugin, asConsumer(task), null);
+        } else {
+            task.run();
+        }
+    }
+
+    /** Runs on the region that owns the given location. */
     public static void runAtLocation(Plugin plugin, Location location, Runnable task) {
         if (FOLIA) {
-            Object scheduler = invoke(getRegionScheduler, Bukkit.getServer());
-            invoke(regionExecute, scheduler, plugin, location.getWorld(),
+            invoke(REGION_EXECUTE, regionScheduler(), plugin, location.getWorld(),
                     location.getBlockX() >> 4, location.getBlockZ() >> 4, task);
-            return;
+        } else {
+            task.run();
         }
-        Bukkit.getScheduler().runTask(plugin, task);
     }
 
-    private static java.util.function.Consumer<Object> toConsumer(Runnable runnable) {
+    private static Object globalScheduler() {
+        return invoke(GET_GLOBAL_SCHEDULER, Bukkit.getServer());
+    }
+
+    private static Object asyncScheduler() {
+        return invoke(GET_ASYNC_SCHEDULER, Bukkit.getServer());
+    }
+
+    private static Object regionScheduler() {
+        return invoke(GET_REGION_SCHEDULER, Bukkit.getServer());
+    }
+
+    private static Object entityScheduler(Entity entity) {
+        return invoke(ENTITY_GET_SCHEDULER, entity);
+    }
+
+    private static Task foliaTask(Method method, Object target, Object... args) {
+        return new Task(invoke(method, target, args));
+    }
+
+    private static Consumer<Object> asConsumer(Runnable runnable) {
         return ignored -> runnable.run();
+    }
+
+    /** Folia's delayed/timer APIs reject delays of 0; clamp to 1 tick. */
+    private static long foliaDelay(long ticks) {
+        return Math.max(1L, ticks);
     }
 
     private static Object invoke(Method method, Object target, Object... args) {
@@ -236,7 +262,7 @@ public final class FoliaScheduler {
                 return;
             }
             try {
-                taskCancel.invoke(handle);
+                TASK_CANCEL.invoke(handle);
             } catch (ReflectiveOperationException e) {
                 throw new RuntimeException("Failed to cancel Folia task", e);
             }

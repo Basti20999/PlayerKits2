@@ -34,7 +34,6 @@ public class PlayersConfigManager extends DataFolderConfigManager{
             PlayerData playerData = null;
             CommonConfig playerConfig = getConfigFile(uuid+".yml",false);
             if(playerConfig != null) {
-                // If config exists
                 FileConfiguration config = playerConfig.getConfig();
                 String name = config.getString("name");
                 ArrayList<PlayerDataKit> playerDataKits = new ArrayList<>();

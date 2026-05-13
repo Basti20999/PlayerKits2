@@ -5,16 +5,14 @@ import pk.ajneb97.utils.FoliaScheduler;
 
 public class PlayerDataSaveTask {
 
-	private PlayerKits2 plugin;
+	private final PlayerKits2 plugin;
 	private FoliaScheduler.Task task;
-	private volatile boolean end;
+
 	public PlayerDataSaveTask(PlayerKits2 plugin) {
 		this.plugin = plugin;
-		this.end = false;
 	}
 
 	public void end() {
-		end = true;
 		if(task != null) {
 			task.cancel();
 			task = null;
@@ -23,12 +21,7 @@ public class PlayerDataSaveTask {
 
 	public void start(int seconds) {
 		long ticks = seconds * 20L;
-		task = FoliaScheduler.runAsyncTimer(plugin, () -> {
-			if(end) {
-				return;
-			}
-			execute();
-		}, 1L, ticks);
+		task = FoliaScheduler.runAsyncTimer(plugin, this::execute, ticks, ticks);
 	}
 
 	public void execute() {

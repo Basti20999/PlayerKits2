@@ -32,7 +32,7 @@ public class InventoryUpdateTaskManager {
             if(player == null || !player.isOnline()){
                 continue;
             }
-            FoliaScheduler.runForEntity(plugin, player, () -> updateFor(inventoryPlayer), null);
+            FoliaScheduler.runForEntityOrNow(plugin, player, () -> updateFor(inventoryPlayer));
         }
     }
 

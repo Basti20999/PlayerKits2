@@ -166,7 +166,7 @@ public class InventoryEditPositionManager {
             FoliaScheduler.runForEntityLater(plugin, inventoryPlayer.getPlayer(), () -> {
                 inventoryPlayer.restoreSavedInventoryContents();
                 inventoryEditManager.openInventory(inventoryPlayer);
-            }, null, 1L);
+            }, 1L);
         }
     }
 }

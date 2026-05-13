@@ -77,8 +77,7 @@ public class InventoryEditListener implements Listener {
         if(inventoryPlayer != null) {
             event.setCancelled(true);
             FoliaScheduler.runForEntityLater(plugin, player,
-                    () -> invManager.writeChat(inventoryPlayer, ChatColor.stripColor(event.getMessage())),
-                    null, 1L);
+                    () -> invManager.writeChat(inventoryPlayer, ChatColor.stripColor(event.getMessage())), 1L);
         }
     }
 }
