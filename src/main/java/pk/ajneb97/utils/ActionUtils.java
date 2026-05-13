@@ -28,12 +28,15 @@ public class ActionUtils {
     }
 
     public static void consoleCommand(String actionLine){
-        ConsoleCommandSender sender = Bukkit.getConsoleSender();
-        Bukkit.dispatchCommand(sender, actionLine);
+        FoliaScheduler.runOrNow(PlayerKitsAPI.getPlugin(), () -> {
+            ConsoleCommandSender sender = Bukkit.getConsoleSender();
+            Bukkit.dispatchCommand(sender, actionLine);
+        });
     }
 
     public static void playerCommand(Player player, String actionLine){
-        player.performCommand(actionLine);
+        FoliaScheduler.runForEntityOrNow(PlayerKitsAPI.getPlugin(), player,
+                () -> player.performCommand(actionLine));
     }
 
     public static void playSound(Player player,String actionLine){
@@ -120,23 +123,26 @@ public class ActionUtils {
         Location location = player.getLocation();
 
         ServerVersion serverVersion = PlayerKits2.serverVersion;
-        EntityType entityType = null;
-        if(serverVersion.serverVersionGreaterEqualThan(serverVersion,ServerVersion.v1_20_R4)){
-            entityType = EntityType.FIREWORK_ROCKET;
-        }else{
-            entityType = EntityType.valueOf("FIREWORK");
-        }
-        Firework firework = (Firework) location.getWorld().spawnEntity(location, entityType);
-        FireworkMeta fireworkMeta = firework.getFireworkMeta();
-        FireworkEffect effect = FireworkEffect.builder().flicker(false)
-                .withColor(colors)
-                .with(type)
-                .withFade(fadeColors)
-                .build();
-        fireworkMeta.addEffect(effect);
-        fireworkMeta.setPower(power);
-        firework.setFireworkMeta(fireworkMeta);
-        firework.setMetadata("playerkits", new FixedMetadataValue(plugin, "no_damage"));
+        final EntityType entityType = serverVersion.serverVersionGreaterEqualThan(serverVersion,ServerVersion.v1_20_R4)
+                ? EntityType.FIREWORK_ROCKET
+                : EntityType.valueOf("FIREWORK");
+
+        final FireworkEffect.Type effectType = type;
+        final int effectPower = power;
+
+        FoliaScheduler.runAtLocation(plugin, location, () -> {
+            Firework firework = (Firework) location.getWorld().spawnEntity(location, entityType);
+            FireworkMeta fireworkMeta = firework.getFireworkMeta();
+            FireworkEffect effect = FireworkEffect.builder().flicker(false)
+                    .withColor(colors)
+                    .with(effectType)
+                    .withFade(fadeColors)
+                    .build();
+            fireworkMeta.addEffect(effect);
+            fireworkMeta.setPower(effectPower);
+            firework.setFireworkMeta(fireworkMeta);
+            firework.setMetadata("playerkits", new FixedMetadataValue(plugin, "no_damage"));
+        });
     }
 
     public static void closeInventory(Player player) {

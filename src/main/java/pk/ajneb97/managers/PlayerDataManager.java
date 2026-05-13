@@ -2,13 +2,13 @@ package pk.ajneb97.managers;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitRunnable;
 import pk.ajneb97.PlayerKits2;
 import pk.ajneb97.configs.PlayersConfigManager;
 import pk.ajneb97.database.MySQLConnection;
 import pk.ajneb97.model.PlayerData;
 import pk.ajneb97.model.internal.GenericCallback;
 import pk.ajneb97.model.internal.PlayerKitsMessageResult;
+import pk.ajneb97.utils.FoliaScheduler;
 import pk.ajneb97.utils.OtherUtils;
 
 import java.util.ArrayList;
@@ -159,28 +159,22 @@ public class PlayerDataManager {
 
 
     public void resetKitForAllPlayers(String kitName, GenericCallback<PlayerKitsMessageResult> callback){
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                MySQLConnection mySQLConnection = plugin.getMySQLConnection();
-                if (mySQLConnection == null) {
-                    PlayersConfigManager playerConfigsManager = plugin.getConfigsManager().getPlayersConfigManager();
-                    playerConfigsManager.resetKitForAllPlayers(kitName);
+        FoliaScheduler.runAsync(plugin, () -> {
+            MySQLConnection mySQLConnection = plugin.getMySQLConnection();
+            if (mySQLConnection == null) {
+                PlayersConfigManager playerConfigsManager = plugin.getConfigsManager().getPlayersConfigManager();
+                playerConfigsManager.resetKitForAllPlayers(kitName);
+            }
+
+            FoliaScheduler.run(plugin, () -> {
+                players.values().forEach(p -> p.resetKit(kitName));
+                if(plugin.getMySQLConnection() != null){
+                    plugin.getMySQLConnection().resetKit(null,kitName,true);
                 }
 
-                new BukkitRunnable() {
-                    @Override
-                    public void run() {
-                        players.values().forEach(p -> p.resetKit(kitName));
-                        if(plugin.getMySQLConnection() != null){
-                            plugin.getMySQLConnection().resetKit(null,kitName,true);
-                        }
-
-                        callback.onDone(PlayerKitsMessageResult.success());
-                    }
-                }.runTask(plugin);
-            }
-        }.runTaskAsynchronously(plugin);
+                callback.onDone(PlayerKitsMessageResult.success());
+            });
+        });
     }
 
     public void manageJoin(Player player){
@@ -233,12 +227,8 @@ public class PlayerDataManager {
         if(playerData != null){
             if(plugin.getMySQLConnection() == null) {
                 if(playerData.isModified()){
-                    new BukkitRunnable(){
-                        @Override
-                        public void run() {
-                            plugin.getConfigsManager().getPlayersConfigManager().saveConfig(playerData);
-                        }
-                    }.runTaskAsynchronously(plugin);
+                    FoliaScheduler.runAsync(plugin,
+                            () -> plugin.getConfigsManager().getPlayersConfigManager().saveConfig(playerData));
                 }
             }
 

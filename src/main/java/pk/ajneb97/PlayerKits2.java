@@ -89,6 +89,9 @@ public class PlayerKits2 extends JavaPlugin {
     }
 
     public void onDisable(){
+        if(playerDataSaveTask != null){
+            playerDataSaveTask.end();
+        }
         this.configsManager.getPlayersConfigManager().saveConfigs();
         Bukkit.getConsoleSender().sendMessage(MessagesManager.getLegacyColoredMessage(prefix+"&eHas been disabled! &fVersion: "+version));
     }
