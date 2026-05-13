@@ -13,6 +13,7 @@ import pk.ajneb97.configs.MainConfigManager;
 import pk.ajneb97.model.Kit;
 import pk.ajneb97.model.KitAction;
 import pk.ajneb97.model.KitRequirements;
+import pk.ajneb97.model.PlayerData;
 import pk.ajneb97.model.internal.GiveKitInstructions;
 import pk.ajneb97.model.internal.PlayerKitsMessageResult;
 import pk.ajneb97.model.inventory.KitInventory;
@@ -295,6 +296,19 @@ public class KitsManager {
         boolean enoughSpace = freeSlots < inventoryKitItems;
         boolean dropItemsIfFullInventory = configFile.getBoolean("drop_items_if_full_inventory");
 
+        // Load player's custom slot arrangement
+        List<Integer> playerCustomSlots = null;
+        if(!giveKitInstructions.isFromCommand()){
+            PlayerData pData = playerDataManager.getPlayer(player, false);
+            if(pData != null){
+                List<Integer> stored = pData.getKitCustomSlots(kitName);
+                if(stored != null && stored.size() == items.size()){
+                    playerCustomSlots = stored;
+                }
+            }
+        }
+        final List<Integer> finalPlayerCustomSlots = playerCustomSlots;
+
         if(enoughSpace && !dropItemsIfFullInventory && !clearInventory){
             sendKitActions(kit.getErrorActions(),player,false);
             return PlayerKitsMessageResult.error(messagesFile.getString("noSpaceError"));
@@ -308,7 +322,8 @@ public class KitsManager {
         sendKitActions(kit.getClaimActions(),player,true);
 
         //Give kit items
-        for(KitItem kitItem : items){
+        for(int itemIdx = 0; itemIdx < items.size(); itemIdx++){
+            KitItem kitItem = items.get(itemIdx);
             ItemStack item = kitItemManager.createItemFromKitItem(kitItem,player,kit);
 
             if(itemHelmet != null && kitItem.equals(itemHelmet)){
@@ -322,11 +337,24 @@ public class KitsManager {
             }else if(itemOffhand != null && kitItem.equals(itemOffhand)){
                 playerInventory.setItemInOffHand(item);
             }else{
-                if(playerInventory.firstEmpty() == -1 && dropItemsIfFullInventory){
-                    FoliaScheduler.runAtLocation(plugin, player.getLocation(),
-                            () -> player.getWorld().dropItemNaturally(player.getLocation(), item));
-                }else{
-                    playerInventory.addItem(item);
+                boolean placed = false;
+                if(finalPlayerCustomSlots != null){
+                    int preferredSlot = finalPlayerCustomSlots.get(itemIdx);
+                    if(preferredSlot >= 0 && preferredSlot <= 35){
+                        ItemStack existing = playerInventory.getItem(preferredSlot);
+                        if(clearInventory || existing == null || existing.getType().equals(Material.AIR)){
+                            playerInventory.setItem(preferredSlot, item);
+                            placed = true;
+                        }
+                    }
+                }
+                if(!placed){
+                    if(playerInventory.firstEmpty() == -1 && dropItemsIfFullInventory){
+                        FoliaScheduler.runAtLocation(plugin, player.getLocation(),
+                                () -> player.getWorld().dropItemNaturally(player.getLocation(), item));
+                    }else{
+                        playerInventory.addItem(item);
+                    }
                 }
             }
         }
