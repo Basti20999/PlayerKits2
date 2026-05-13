@@ -18,11 +18,12 @@ import pk.ajneb97.utils.OtherUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class InventoryEditManager {
 
     private PlayerKits2 plugin;
-    private ArrayList<InventoryPlayer> players;
+    private final List<InventoryPlayer> players;
     private InventoryEditActionsManager inventoryEditActionsManager;
     private InventoryEditDisplayManager inventoryEditDisplayManager;
     private InventoryEditKitItemsManager inventoryEditKitItemsManager;
@@ -30,7 +31,7 @@ public class InventoryEditManager {
     private InventoryEditRequirementsManager inventoryEditRequirementsManager;
     public InventoryEditManager(PlayerKits2 plugin){
         this.plugin = plugin;
-        this.players = new ArrayList<>();
+        this.players = new CopyOnWriteArrayList<>();
         this.inventoryEditActionsManager = new InventoryEditActionsManager(plugin,this);
         this.inventoryEditDisplayManager = new InventoryEditDisplayManager(plugin,this);
         this.inventoryEditKitItemsManager = new InventoryEditKitItemsManager(plugin,this);
@@ -63,7 +64,7 @@ public class InventoryEditManager {
         return inventoryEditPositionManager;
     }
 
-    public ArrayList<InventoryPlayer> getPlayers() {
+    public List<InventoryPlayer> getPlayers() {
         return players;
     }
 

@@ -18,6 +18,7 @@ import pk.ajneb97.model.internal.PlayerKitsMessageResult;
 import pk.ajneb97.model.inventory.KitInventory;
 import pk.ajneb97.model.item.KitItem;
 import pk.ajneb97.utils.ActionUtils;
+import pk.ajneb97.utils.FoliaScheduler;
 import pk.ajneb97.utils.OtherUtils;
 import pk.ajneb97.utils.PlayerUtils;
 import java.util.ArrayList;
@@ -322,7 +323,12 @@ public class KitsManager {
                 playerInventory.setItemInOffHand(item);
             }else{
                 if(playerInventory.firstEmpty() == -1 && dropItemsIfFullInventory){
-                    player.getWorld().dropItemNaturally(player.getLocation(), item);
+                    if(FoliaScheduler.isFolia()){
+                        FoliaScheduler.runAtLocation(plugin, player.getLocation(),
+                                () -> player.getWorld().dropItemNaturally(player.getLocation(), item));
+                    }else{
+                        player.getWorld().dropItemNaturally(player.getLocation(), item);
+                    }
                 }else{
                     playerInventory.addItem(item);
                 }

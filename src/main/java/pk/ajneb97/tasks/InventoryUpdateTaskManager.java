@@ -1,16 +1,17 @@
 package pk.ajneb97.tasks;
 
 import org.bukkit.Material;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.scheduler.BukkitRunnable;
 import pk.ajneb97.PlayerKits2;
 import pk.ajneb97.managers.*;
 import pk.ajneb97.model.inventory.InventoryPlayer;
+import pk.ajneb97.utils.FoliaScheduler;
 import pk.ajneb97.utils.InventoryUtils;
 import pk.ajneb97.utils.ItemUtils;
 
-import java.util.ArrayList;
+import java.util.List;
 
 public class InventoryUpdateTaskManager {
 
@@ -20,38 +21,46 @@ public class InventoryUpdateTaskManager {
     }
 
     public void start(){
-        new BukkitRunnable(){
-            @Override
-            public void run() {
-                execute();
-            }
-        }.runTaskTimer(plugin,0L,20L);
+        FoliaScheduler.runTimer(plugin, this::tick, 1L, 20L);
     }
 
-    public void execute(){
+    private void tick(){
+        InventoryManager inventoryManager = plugin.getInventoryManager();
+        List<InventoryPlayer> players = inventoryManager.getPlayers();
+        for(InventoryPlayer inventoryPlayer : players){
+            Player player = inventoryPlayer.getPlayer();
+            if(player == null || !player.isOnline()){
+                continue;
+            }
+            FoliaScheduler.runForEntity(plugin, player, () -> updateFor(inventoryPlayer), null);
+        }
+    }
+
+    private void updateFor(InventoryPlayer inventoryPlayer){
+        Player player = inventoryPlayer.getPlayer();
+        if(player == null || !player.isOnline()){
+            return;
+        }
         InventoryManager inventoryManager = plugin.getInventoryManager();
         KitsManager kitsManager = plugin.getKitsManager();
         PlayerDataManager playerDataManager = plugin.getPlayerDataManager();
         KitItemManager kitItemManager = plugin.getKitItemManager();
 
-        ArrayList<InventoryPlayer> players = inventoryManager.getPlayers();
-        for(InventoryPlayer player : players){
-            Inventory inv = InventoryUtils.getTopInventory(player.getPlayer());
-            if(inv == null){
+        Inventory inv = InventoryUtils.getTopInventory(player);
+        if(inv == null){
+            return;
+        }
+        ItemStack[] contents = inv.getContents();
+        for(int i=0;i<contents.length;i++){
+            ItemStack item = contents[i];
+            if(item == null || item.getType().equals(Material.AIR)){
                 continue;
             }
-            ItemStack[] contents = inv.getContents();
-            for(int i=0;i<contents.length;i++){
-                ItemStack item = contents[i];
-                if(item == null || item.getType().equals(Material.AIR)){
-                    continue;
-                }
 
-                String kitName = ItemUtils.getTagStringItem(plugin,item,"playerkits_kit");
-                if(kitName != null){
-                    inventoryManager.setKit(kitName,player.getPlayer(),inv,i,kitsManager,
-                            playerDataManager,kitItemManager,item);
-                }
+            String kitName = ItemUtils.getTagStringItem(plugin,item,"playerkits_kit");
+            if(kitName != null){
+                inventoryManager.setKit(kitName,player,inv,i,kitsManager,
+                        playerDataManager,kitItemManager,item);
             }
         }
     }
