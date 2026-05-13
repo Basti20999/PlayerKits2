@@ -8,6 +8,7 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import pk.ajneb97.configs.MainConfigManager;
+import pk.ajneb97.managers.KitSlotEditManager;
 import pk.ajneb97.managers.MessagesManager;
 import pk.ajneb97.managers.PlayerDataManager;
 import pk.ajneb97.model.Kit;
@@ -75,6 +76,8 @@ public class MainCommand implements CommandExecutor, TabCompleter {
                 reset(sender,args,messagesConfig,msgManager);
             }else if(args[0].equalsIgnoreCase("edit")) {
                 edit(player,args,messagesConfig,msgManager);
+            }else if(args[0].equalsIgnoreCase("slots")){
+                slots(player,args,messagesConfig,msgManager);
             }else if(args[0].equalsIgnoreCase("verify")){
                 verify(player,messagesConfig,msgManager);
             }else if(args[0].equalsIgnoreCase("migrate")) {
@@ -104,6 +107,32 @@ public class MainCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    public void slots(Player player, String[] args, FileConfiguration messagesConfig, MessagesManager msgManager){
+        // /kit slots <kit>
+        if(args.length < 2){
+            msgManager.sendMessage(player, messagesConfig.getString("commandSlotsError"), true);
+            return;
+        }
+
+        String kitName = args[1];
+        Kit kit = plugin.getKitsManager().getKitByName(kitName);
+        if(kit == null){
+            msgManager.sendMessage(player, messagesConfig.getString("kitDoesNotExists")
+                    .replace("%kit%", kitName), true);
+            return;
+        }
+
+        if(kit.isPermissionRequired() && !kit.playerHasPermission(player)){
+            msgManager.sendMessage(player, messagesConfig.getString("kitNoPermissions"), true);
+            return;
+        }
+
+        KitSlotEditManager slotEditManager = plugin.getKitSlotEditManager();
+        InventoryPlayer inventoryPlayer = new InventoryPlayer(player, "slot_edit");
+        inventoryPlayer.setKitName(kitName);
+        slotEditManager.openInventory(inventoryPlayer);
+    }
+
     public void help(CommandSender sender,MessagesManager msgManager,FileConfiguration messagesConfig){
         if(!PlayerUtils.isPlayerKitsAdmin(sender)){
             msgManager.sendMessage(sender,messagesConfig.getString("commandDoesNotExists"),true);
@@ -113,6 +142,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(MessagesManager.getLegacyColoredMessage(" "));
         sender.sendMessage(MessagesManager.getLegacyColoredMessage("&6/kit &8Opens the GUI."));
         sender.sendMessage(MessagesManager.getLegacyColoredMessage("&6/kit claim <kit> &8Claims a kit outside the GUI."));
+        sender.sendMessage(MessagesManager.getLegacyColoredMessage("&6/kit slots <kit> &8Customise which inventory slots a kit fills."));
         sender.sendMessage(MessagesManager.getLegacyColoredMessage("&6/kit create <kit> (optional)original &8Creates a new kit using the items in your inventory."));
         sender.sendMessage(MessagesManager.getLegacyColoredMessage("&6/kit edit <kit> &8Edits a kit."));
         sender.sendMessage(MessagesManager.getLegacyColoredMessage("&6/kit give <kit> <player> &8Gives a kit to a player."));
@@ -424,6 +454,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
             if(kitPreviewEnabled){
                 commands.add("preview");
             }
+            commands.add("slots");
             if(PlayerUtils.isPlayerKitsAdmin(sender)){
                 commands.add("give");commands.add("delete");commands.add("create");
                 commands.add("reload");commands.add("reset");commands.add("edit");
@@ -443,6 +474,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
                 if(kitPreviewEnabled){
                     commands.add("preview");
                 }
+                commands.add("slots");
                 if(PlayerUtils.isPlayerKitsAdmin(sender)){
                     commands.add("give");commands.add("delete");
                     commands.add("reset");commands.add("edit");

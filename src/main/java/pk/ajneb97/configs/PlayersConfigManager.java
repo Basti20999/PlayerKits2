@@ -10,6 +10,7 @@ import pk.ajneb97.utils.FoliaScheduler;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -42,11 +43,24 @@ public class PlayersConfigManager extends DataFolderConfigManager{
                         long cooldown = config.getLong("kits." + key + ".cooldown");
                         boolean oneTime = config.getBoolean("kits." + key + ".one_time");
                         boolean bought = config.getBoolean("kits." + key + ".bought");
+                        List<Integer> customSlots = null;
+                        if(config.contains("kits." + key + ".custom_slots")){
+                            List<?> rawList = config.getList("kits." + key + ".custom_slots");
+                            if(rawList != null && !rawList.isEmpty()){
+                                customSlots = new ArrayList<>();
+                                for(Object o : rawList){
+                                    if(o instanceof Integer){
+                                        customSlots.add((Integer) o);
+                                    }
+                                }
+                            }
+                        }
 
                         PlayerDataKit playerDataKit = new PlayerDataKit(key);
                         playerDataKit.setCooldown(cooldown);
                         playerDataKit.setOneTime(oneTime);
                         playerDataKit.setBought(bought);
+                        playerDataKit.setCustomSlots(customSlots);
 
                         playerDataKits.add(playerDataKit);
                     }
@@ -74,6 +88,12 @@ public class PlayersConfigManager extends DataFolderConfigManager{
             config.set("kits."+kitName+".cooldown",playerDataKit.getCooldown());
             config.set("kits."+kitName+".one_time",playerDataKit.isOneTime());
             config.set("kits."+kitName+".bought",playerDataKit.isBought());
+            List<Integer> customSlots = playerDataKit.getCustomSlots();
+            if(customSlots != null && !customSlots.isEmpty()){
+                config.set("kits."+kitName+".custom_slots", customSlots);
+            }else{
+                config.set("kits."+kitName+".custom_slots", null);
+            }
         }
 
         playerConfig.saveConfig();

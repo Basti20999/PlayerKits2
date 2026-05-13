@@ -42,5 +42,8 @@ kitPreviewDisabled: "&cKit preview is disabled."
 inventoryNotExists: "&cThat inventory doesn't exists."
 onlyPlayerCommand: "&cOnly a player can use this command."
 commandPreviewOtherCorrect: "&aPreviewing kit &7%kit% &ato &e%player%&a."
+commandSlotsError: "&cUsage: &7/kit slots <kit>"
+kitSlotsaved: "&aSlot arrangement saved for kit &7%kit%&a!"
+kitSlotReset: "&aSlot arrangement reset to default for kit &7%kit%&a."
 
 

@@ -1,6 +1,7 @@
 package pk.ajneb97.model;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 public class PlayerData {
@@ -136,5 +137,23 @@ public class PlayerData {
                 modified = true;
             }
         }
+    }
+
+    public void setKitCustomSlots(String kitName, List<Integer> customSlots){
+        PlayerDataKit playerDataKit = getKit(kitName);
+        if(playerDataKit == null){
+            playerDataKit = new PlayerDataKit(kitName);
+            kits.add(playerDataKit);
+        }
+        playerDataKit.setCustomSlots(customSlots);
+        modified = true;
+    }
+
+    public List<Integer> getKitCustomSlots(String kitName){
+        PlayerDataKit playerDataKit = getKit(kitName);
+        if(playerDataKit == null){
+            return null;
+        }
+        return playerDataKit.getCustomSlots();
     }
 }
