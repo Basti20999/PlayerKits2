@@ -411,24 +411,34 @@ public class MainCommand implements CommandExecutor, TabCompleter {
 
     public void edit(Player player,String[] args,FileConfiguration messagesConfig,MessagesManager msgManager){
         // /kit edit <kit>
-        if(!PlayerUtils.isPlayerKitsAdmin(player)){
-            msgManager.sendMessage(player,messagesConfig.getString("noPermissions"),true);
-            return;
-        }
-
         if(args.length < 2){
             msgManager.sendMessage(player,messagesConfig.getString("commandEditError"),true);
             return;
         }
 
-        if(plugin.getKitsManager().getKitByName(args[1]) == null){
+        String kitName = args[1];
+        Kit kit = plugin.getKitsManager().getKitByName(kitName);
+        if(kit == null){
             msgManager.sendMessage(player,messagesConfig.getString("kitDoesNotExists")
-                    .replace("%kit%",args[1]),true);
+                    .replace("%kit%",kitName),true);
+            return;
+        }
+
+        if(!PlayerUtils.isPlayerKitsAdmin(player)){
+            // Non-admins can only edit slots
+            if(kit.isPermissionRequired() && !kit.playerHasPermission(player)){
+                msgManager.sendMessage(player,messagesConfig.getString("kitNoPermissions"),true);
+                return;
+            }
+            KitSlotEditManager slotEditManager = plugin.getKitSlotEditManager();
+            InventoryPlayer inventoryPlayer = new InventoryPlayer(player, "slot_edit");
+            inventoryPlayer.setKitName(kitName);
+            slotEditManager.openInventory(inventoryPlayer);
             return;
         }
 
         InventoryPlayer inventoryPlayer = new InventoryPlayer(player,null);
-        inventoryPlayer.setKitName(args[1]);
+        inventoryPlayer.setKitName(kitName);
         plugin.getInventoryEditManager().openInventory(inventoryPlayer);
     }
 
@@ -455,9 +465,10 @@ public class MainCommand implements CommandExecutor, TabCompleter {
                 commands.add("preview");
             }
             commands.add("slots");
+            commands.add("edit");
             if(PlayerUtils.isPlayerKitsAdmin(sender)){
                 commands.add("give");commands.add("delete");commands.add("create");
-                commands.add("reload");commands.add("reset");commands.add("edit");
+                commands.add("reload");commands.add("reset");
                 commands.add("verify");commands.add("migrate");commands.add("open");
             }
             for(String c : commands) {

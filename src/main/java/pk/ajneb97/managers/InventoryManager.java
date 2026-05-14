@@ -184,12 +184,33 @@ public class InventoryManager {
                 break;
             }
         }
+
+        // "Edit Slots" button in slot 53 (bottom-right of preview)
+        ItemStack editSlotsItem = new org.bukkit.inventory.ItemStack(org.bukkit.Material.COMPASS);
+        ItemMeta editSlotsMeta = editSlotsItem.getItemMeta();
+        editSlotsMeta.setDisplayName(MessagesManager.getLegacyColoredMessage("&6&lEdit Slots"));
+        editSlotsMeta.setLore(Arrays.asList(
+                MessagesManager.getLegacyColoredMessage("&7Drag items to choose which inventory"),
+                MessagesManager.getLegacyColoredMessage("&7slots this kit fills when claimed.")));
+        editSlotsItem.setItemMeta(editSlotsMeta);
+        editSlotsItem = ItemUtils.setTagStringItem(plugin, editSlotsItem, "playerkits_slot_edit", kit.getName());
+        inv.setItem(53, editSlotsItem);
     }
 
     public void clickInventory(InventoryPlayer inventoryPlayer, ItemStack item, ClickType clickType){
         String kitName = ItemUtils.getTagStringItem(plugin,item,"playerkits_kit");
         if(kitName != null){
             clickOnKitItem(inventoryPlayer,kitName,clickType);
+            return;
+        }
+
+        String slotEdit = ItemUtils.getTagStringItem(plugin,item,"playerkits_slot_edit");
+        if(slotEdit != null){
+            Player player = inventoryPlayer.getPlayer();
+            plugin.getInventoryManager().removeInventoryPlayer(player);
+            InventoryPlayer slotInventoryPlayer = new InventoryPlayer(player, "slot_edit");
+            slotInventoryPlayer.setKitName(slotEdit);
+            plugin.getKitSlotEditManager().openInventory(slotInventoryPlayer);
             return;
         }
 
